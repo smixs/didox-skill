@@ -180,8 +180,17 @@ def cmd_doc_pdf(args):
     emit({"ok": True, "file": str(out), "bytes": len(payload)})
 
 
-def cmd_stats(_args):
-    emit(api_request("GET", "/v2/documents/statistics/all", user_key=get_user_key()))
+def cmd_stats(args):
+    # The API counts INCOMING docs when owner is omitted (opposite of the list
+    # endpoint's default), so always pass owner explicitly to stay consistent.
+    params = {"owner": args.owner}
+    if args.partner:
+        params["partner"] = args.partner
+    if args.doctype:
+        params["doctype"] = args.doctype
+    query = urllib.parse.urlencode(params)
+    emit(api_request("GET", f"/v2/documents/statistics/all?{query}",
+                     user_key=get_user_key()))
 
 
 def cmd_partner(args):
@@ -404,7 +413,12 @@ def main():
     doc_pdf.add_argument("output")
     doc_pdf.set_defaults(func=cmd_doc_pdf)
 
-    sub.add_parser("stats").set_defaults(func=cmd_stats)
+    stats = sub.add_parser("stats")
+    stats.add_argument("--owner", default="1", choices=["0", "1"],
+                       help="1=outgoing (default, same as docs), 0=incoming")
+    stats.add_argument("--partner", help="filter by partner TIN")
+    stats.add_argument("--doctype", help="doc type code")
+    stats.set_defaults(func=cmd_stats)
 
     partner = sub.add_parser("partner")
     partner.add_argument("tin")

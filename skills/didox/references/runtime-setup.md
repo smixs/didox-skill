@@ -10,13 +10,25 @@ command -v python3 >/dev/null || echo "MISSING: python3 (3.8+)"
 
 CLI — один файл на stdlib, ничего ставить не нужно.
 
-Для подписи (`sign`) дополнительно: `uv` (мост `eimzo_sign.py` тянет websockets
-через PEP 723) и запущенное приложение E-IMZO:
+Для подписи (`sign`/`accept`/`reject`/`cancel`) дополнительно: `uv` (мост
+`eimzo_sign.py` тянет websockets через PEP 723) и запущенное приложение
+E-IMZO — оно живёт на машине пользователя с ключом ЭЦП; на сервере его нет
+и не будет, там доступно всё остальное:
 
 ```bash
 command -v uv >/dev/null || echo "MISSING: uv (нужен только для sign)"
-nc -z 127.0.0.1 64646 || echo "MISSING: E-IMZO не запущен (нужен только для sign)"
+nc -z 127.0.0.1 64646 || echo "MISSING: E-IMZO не запущен (подпись только на машине с ключом)"
 ```
+
+Для конвейера docx→PDF (`clean_docx.py` + `docx_to_pdf.sh`) дополнительно:
+
+```bash
+command -v pandoc >/dev/null || echo "MISSING: pandoc (нужен только для docx→PDF)"
+command -v uv >/dev/null || echo "MISSING: uv (weasyprint ставится сам через uv run --with)"
+```
+
+Нет pandoc (голый контейнер) — конвейер недоступен; готовый PDF можно
+подавать и без него, а конвертацию сделать на машине, где pandoc есть.
 
 ## 2. Конфигурация
 
