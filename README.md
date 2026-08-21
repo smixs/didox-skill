@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.8+-blue" alt="python 3.8+">
   <img src="https://img.shields.io/badge/dependencies-0-brightgreen" alt="zero dependencies">
-  <img src="https://img.shields.io/badge/Claude_Code-skill_included-orange" alt="Claude Code skill">
+  <img src="https://img.shields.io/badge/agent_skill-included-orange" alt="agent skill included">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT">
 </p>
 
@@ -21,7 +21,7 @@
 Didox — крупнейший оператор электронного документооборота Узбекистана
 (350 000+ компаний). Веб-кабинет удобен человеку и мучителен агенту:
 формы, датапикеры, модалки. `didox-cli` разговаривает с партнёрским API
-напрямую — а приложенный скилл учит Claude Code делать это самостоятельно.
+напрямую — а приложенный скилл учит любого AI-агента делать это самостоятельно.
 
 ## Возможности
 
@@ -84,13 +84,15 @@ didox.py draft-000 \
 `8` Спецификация · `9` Доп. соглашение.
 Статусы: `0` черновик · `1` ждёт подписи партнёра · `3` подписан обеими · `4` отказ.
 
-## Скилл для Claude Code
+## Скилл для AI-агентов
 
-Папка [`didox-cli/`](didox-cli/) — готовый agent skill: SKILL.md с маршрутами
-(«подать акт», «проверить подпись»), pre-flight, справочники API и сам CLI.
+Папка [`didox-cli/`](didox-cli/) — готовый agent skill в открытом формате
+SKILL.md: маршруты («подать акт», «проверить подпись»), pre-flight,
+справочники API и сам CLI. Работает с любым агентом, понимающим этот формат —
+положите папку в каталог скиллов вашего агента:
 
 ```bash
-cp -R didox-cli ~/.claude/skills/
+cp -R didox-cli ~/.claude/skills/   # или каталог скиллов вашего агента
 ```
 
 После этого «выстави акт руделлу по подписанному договору» — задача одного
@@ -99,7 +101,7 @@ cp -R didox-cli ~/.claude/skills/
 
 ## English
 
-CLI + Claude Code agent skill for **Didox.uz**, Uzbekistan's largest
+CLI + universal agent skill for **Didox.uz**, Uzbekistan's largest
 e-document exchange (EDO) operator. Single-file Python 3.8+, zero
 dependencies, JSON output. List documents, check signing status, look up any
 company by TIN from the tax registry, create document drafts with PDF
