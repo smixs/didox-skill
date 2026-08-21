@@ -10,6 +10,14 @@ command -v python3 >/dev/null || echo "MISSING: python3 (3.8+)"
 
 CLI — один файл на stdlib, ничего ставить не нужно.
 
+Для подписи (`sign`) дополнительно: `uv` (мост `eimzo_sign.py` тянет websockets
+через PEP 723) и запущенное приложение E-IMZO:
+
+```bash
+command -v uv >/dev/null || echo "MISSING: uv (нужен только для sign)"
+nc -z 127.0.0.1 64646 || echo "MISSING: E-IMZO не запущен (нужен только для sign)"
+```
+
 ## 2. Конфигурация
 
 Env-файл ищется в таком порядке: путь из `--env`, `./.env` рядом с текущей

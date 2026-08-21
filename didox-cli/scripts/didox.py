@@ -246,6 +246,50 @@ def cmd_draft_delete(args):
                      user_key=get_user_key()))
 
 
+def cmd_sign(args):
+    import base64
+    import subprocess
+
+    user_key = get_user_key()
+    doc = api_request("GET", f"/v1/documents/{args.doc_id}?owner=1", user_key=user_key)
+    to_sign = (doc or {}).get("data", {}).get("json")
+    if to_sign is None:
+        fail(f"document {args.doc_id} has no data.json to sign "
+             f"(already signed, or not an outgoing draft): {json.dumps(doc)[:300]}")
+
+    data_b64 = base64.b64encode(
+        json.dumps(to_sign, ensure_ascii=False, separators=(",", ":")).encode()
+    ).decode()
+
+    bridge = Path(__file__).with_name("eimzo_sign.py")
+    proc = subprocess.run(
+        ["uv", "run", str(bridge), "sign", data_b64, "--serial", args.serial],
+        capture_output=True, text=True,
+    )
+    if proc.returncode != 0:
+        fail(f"E-IMZO signing failed: {proc.stderr.strip()[:400]}")
+    signed = json.loads(proc.stdout)
+
+    stamped = api_request(
+        "POST", "/v1/dsvs/timestamp",
+        body={"pkcs7": signed["pkcs7_64"], "signatureHex": signed["signature_hex"]},
+        user_key=user_key,
+    )
+    token = (stamped or {}).get("timeStampTokenB64")
+    if not token:
+        fail(f"timestamp not attached: {json.dumps(stamped)[:300]}")
+
+    if not args.submit:
+        emit({"ok": True, "signed": True, "submitted": False,
+              "note": "signature + timestamp ready; re-run with --submit to send",
+              "timestamp_preview": token[:24] + "..."})
+        return
+
+    result = api_request("POST", f"/v1/documents/{args.doc_id}/sign",
+                         body={"signature": token}, user_key=user_key)
+    emit({"ok": True, "submitted": True, "result": result})
+
+
 def cmd_raw(args):
     body = json.loads(args.body) if args.body else None
     emit(api_request(args.method.upper(), args.path, body=body,
@@ -303,6 +347,14 @@ def main():
     draft_delete = sub.add_parser("draft-delete")
     draft_delete.add_argument("doc_id")
     draft_delete.set_defaults(func=cmd_draft_delete)
+
+    sign = sub.add_parser("sign", help="sign an outgoing document via local E-IMZO")
+    sign.add_argument("doc_id")
+    sign.add_argument("--serial", required=True,
+                      help="ЭЦП key serial (from eimzo_sign.py keys)")
+    sign.add_argument("--submit", action="store_true",
+                      help="actually send the signature (default: prepare only)")
+    sign.set_defaults(func=cmd_sign)
 
     raw = sub.add_parser("raw")
     raw.add_argument("method")
