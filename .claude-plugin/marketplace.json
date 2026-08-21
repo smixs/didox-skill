@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "didox",
+  "description": "Didox.uz (ЭДО Узбекистана) для AI-агентов: документы, контрагенты, подача, подпись E-IMZO.",
+  "owner": {
+    "name": "Serge Shima",
+    "url": "https://github.com/smixs"
+  },
+  "plugins": [
+    {
+      "name": "didox",
+      "description": "Найти документ, пробить компанию по ИНН, подать акт или договор контрагенту, подписать через локальный E-IMZO.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

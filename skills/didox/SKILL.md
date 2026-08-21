@@ -1,25 +1,27 @@
 ---
-name: didox-cli
+name: didox
 description: >
-  Operate Didox.uz (Uzbekistan e-document exchange) through its partner API
-  via the bundled didox.py CLI: list documents and check signing status, look
-  up companies by ИНН/TIN, create document drafts with PDF attachments,
-  download print forms, delete drafts. Use when the user says didox / дидокс /
-  didoks / дидокс.уз in any spelling or layout, or asks to выставить, подать
-  or отправить акт/договор/приложение контрагенту, проверить подписал ли
-  контрагент, найти документ, пробить компанию по ИНН, hujjat yuborish —
-  even if they don't say "Didox". Do NOT use for signing documents (E-IMZO
-  key, the user signs), for Russian EDO operators (Diadoc, СБИС), or for
-  docx→PDF preparation with no filing.
+  Operate Didox.uz (Uzbekistan e-document exchange) end to end: turn a Word
+  draft into a clean PDF, file it to a counterparty, check signing status,
+  look up companies by ИНН/TIN, sign with the local E-IMZO key. Use when the
+  user says didox / дидокс / didoks / дидокс.уз in any spelling or layout, or
+  asks to выставить, подать or отправить акт/договор/приложение контрагенту,
+  проверить подписал ли контрагент, найти документ, пробить компанию по ИНН,
+  подписать ЭЦП, hujjat yuborish — even if they don't say "Didox". Do NOT use
+  for Russian EDO operators (Diadoc, СБИС) or for issuing ЭСФ/счёт-фактура
+  from an accounting system.
 ---
 
-# didox-cli — управление Didox через партнёрский API
+# didox — управление Didox.uz через партнёрский API
 
 ## Overview
 
-CLI `scripts/didox.py` покрывает партнёрский API Didox: документы, контрагенты,
-черновики. Вывод — JSON в stdout; ошибка — JSON в stderr, exit 1. Черновик
-обратим (`draft-delete`), подпись — нет: её делает пользователь ключом E-IMZO.
+Полный маршрут документа: docx с правками → чистый PDF → черновик у
+контрагента → подпись ключом E-IMZO. CLI `scripts/didox.py` покрывает
+партнёрский API, `scripts/eimzo_sign.py` — мост к локальному E-IMZO.
+Вывод — JSON в stdout; ошибка — JSON в stderr, exit 1.
+
+Что обратимо, а что нет: черновик удаляется (`draft-delete`), подпись — нет.
 
 ## Pre-flight
 
@@ -55,8 +57,8 @@ CLI `scripts/didox.py` покрывает партнёрский API Didox: до
       обеими сторонами (`docs --partner <ИНН>`, статус 3). Номер и дата — из
       этой выдачи, не из локального docx: расхождение означает, что docx
       устарел, а акт к несуществующему договору контрагент отклонит.
-- [ ] PDF чистый: без правок, выносок и пустых полей (подготовка docx→PDF —
-      скилл didox).
+- [ ] PDF чистый: без правок, выносок и пустых полей (подготовка — раздел
+      «Из docx в PDF» ниже).
 - [ ] Подтип выбран по таблице в `references/api-details.md` (акт → 5,
       договор → 3, приложения → 9).
 
@@ -71,6 +73,26 @@ scripts/didox.py draft-000 \
 
 Реквизиты продавца CLI берёт из профиля, покупателя — из налоговой базы по
 ИНН. После создания проверь результат: `docs --partner <ИНН> --status 0`.
+
+## Из docx в PDF
+
+Договор или акт обычно приходит в .docx с принятыми правками и комментариями
+юриста. Подавать такой файл нельзя: зачёркнутый текст и выноски попадут в
+подписанный документ.
+
+```bash
+scripts/clean_docx.py <in.docx> <clean.docx>   # принять правки, убрать комментарии
+scripts/docx_to_pdf.sh <clean.docx> <out.pdf>  # pandoc + weasyprint, без Word и GUI
+```
+
+`clean_docx.py` печатает `ok … ins=0 del=0 comments=0` и падает, если правки
+остались. Перед подачей открой PDF и глянь первую и последнюю страницы: нет
+зачёркиваний, нет выносок, реквизиты на месте. Комментарии юриста прочитай ДО
+чистки (`references/docx-prep.md`) — там аргументы по спорным пунктам, после
+чистки они исчезают безвозвратно.
+
+Имя файла латиницей (`Akt_1_k_Dogovoru_<номер>.pdf`) — так оно читается в
+списке Didox. Один документ = один PDF: договор и приложения не склеивать.
 
 ## Подпись через локальный E-IMZO
 
@@ -103,3 +125,6 @@ scripts/didox.py sign <DOC_ID> --serial <serial> --submit   # отправить
 | Подтип «Другое» для приложений к договору | 9 «Доп. соглашение» (таблица в api-details) |
 | `--partner` не сузил выдачу — взят чужой документ | Сверить `partnerTin` в ответе с ИНН контрагента |
 | Секреты в аргументах команд или в git | Только env-файл, см. runtime-setup |
+| Договор и приложения склеены в один PDF | Два документа — два черновика |
+| Подан акт-шаблон с пустым номером и датами | Заполнить номер и даты до подачи |
+| Открыт Microsoft Word для конвертации | `scripts/docx_to_pdf.sh` — без GUI |

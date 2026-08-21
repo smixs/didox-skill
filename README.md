@@ -5,14 +5,15 @@
 </p>
 
 <p align="center">
-  Документы, контрагенты, черновики — весь партнёрский API узбекского ЭДО<br>
-  одним Python-файлом без единой зависимости. Вывод — JSON, агенту читать удобно.
+  От Word-черновика до подписи ЭЦП: подготовить PDF, подать контрагенту,<br>
+  проверить статус, подписать. Без единой зависимости, вывод — JSON.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.8+-blue" alt="python 3.8+">
   <img src="https://img.shields.io/badge/dependencies-0-brightgreen" alt="zero dependencies">
-  <img src="https://img.shields.io/badge/agent_skill-included-orange" alt="agent skill included">
+  <a href="https://skills.sh/smixs/didox-skill"><img src="https://img.shields.io/badge/skills.sh-70%2B_agents-orange" alt="skills.sh"></a>
+  <img src="https://img.shields.io/badge/E--IMZO-signing-9cf" alt="E-IMZO signing">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT">
 </p>
 
@@ -37,17 +38,47 @@ Didox — крупнейший оператор электронного док�
 E-IMZO и никогда не проходит через CLI. Отправка подписи требует явного
 флага `--submit` — случайно подписать нельзя.
 
+## Установка
+
+Через [skills.sh](https://skills.sh/smixs/didox-skill) — ставится в любой из 70+ поддерживаемых агентов (Claude Code, Cursor, Codex, Windsurf, Gemini CLI…):
+
+```bash
+npx skills add smixs/didox-skill        # спросит, куда ставить
+npx skills add smixs/didox-skill -g     # глобально, для всех проектов
+npx skills update didox                 # обновить
+```
+
+Claude Code — как плагин:
+
+```bash
+claude plugin marketplace add smixs/didox-skill && claude plugin install didox@didox
+```
+
+OpenAI Codex CLI:
+
+```bash
+npx skills add smixs/didox-skill --agent codex
+```
+
+Вручную:
+
+```bash
+git clone https://github.com/smixs/didox-skill.git
+cp -r didox-skill/skills/didox ~/.claude/skills/     # или каталог скиллов вашего агента
+```
+
+После установки перезапустите сессию агента, чтобы скилл подхватился.
+
 ## Быстрый старт
 
 ```bash
-git clone https://github.com/smixs/didox-skill && cd didox-skill
 mkdir -p ~/.didox && cat > ~/.didox/env <<'EOF'
 DIDOX_PARTNER_TOKEN=<партнёрский JWT>
 DIDOX_TIN=<ИНН вашей компании>
 DIDOX_PASSWORD=<пароль аккаунта Didox>
 EOF
 chmod 600 ~/.didox/env
-./didox-cli/scripts/didox.py login
+~/.claude/skills/didox/scripts/didox.py login
 ```
 
 Партнёрский токен выдаёт аккаунт-менеджер Didox ([t.me/Didox_account](https://t.me/Didox_account)).
@@ -88,13 +119,13 @@ didox.py draft-000 \
 
 ## Скилл для AI-агентов
 
-Папка [`didox-cli/`](didox-cli/) — готовый agent skill в открытом формате
+Папка [`skills/didox/`](skills/didox/) — готовый agent skill в открытом формате
 SKILL.md: маршруты («подать акт», «проверить подпись»), pre-flight,
 справочники API и сам CLI. Работает с любым агентом, понимающим этот формат —
 положите папку в каталог скиллов вашего агента:
 
 ```bash
-cp -R didox-cli ~/.claude/skills/   # или каталог скиллов вашего агента
+npx skills add smixs/didox-skill   # см. раздел «Установка»
 ```
 
 После этого «выстави акт контрагенту по подписанному договору» — задача одного
@@ -103,13 +134,20 @@ cp -R didox-cli ~/.claude/skills/   # или каталог скиллов ва�
 
 ## English
 
-Universal agent skill (with a bundled CLI) for **Didox.uz**, Uzbekistan's largest
-e-document exchange (EDO) operator. Single-file Python 3.8+, zero
-dependencies, JSON output. List documents, check signing status, look up any
-company by TIN from the tax registry, create document drafts with PDF
-attachments, download print forms. Signing is deliberately excluded: an
-E-IMZO digital signature is legally binding, so a human signs. Config lives
-in `~/.didox/env` (partner token, TIN, account password) — see Quick Start.
+Universal agent skill (with a bundled CLI) for **Didox.uz**, Uzbekistan's
+largest e-document exchange (EDO) operator. Python 3.8+, zero dependencies,
+JSON output — installs into 70+ agents:
+
+```bash
+npx skills add smixs/didox-skill
+```
+
+Turn a Word draft into a clean PDF, file it to a counterparty, list documents,
+check signing status, look up any company by TIN from the tax registry,
+download print forms, and sign with the local E-IMZO key. The key password is
+typed into the E-IMZO window and never passes through the CLI; sending a
+signature requires an explicit `--submit` flag. Config lives in `~/.didox/env`
+(partner token, TIN, account password) — see Quick Start.
 
 ## Oʼzbekcha
 
@@ -117,16 +155,30 @@ in `~/.didox/env` (partner token, TIN, account password) — see Quick Start.
 ishlash uchun CLI va AI-agentlar uchun tayyor skill. Bitta Python-fayl,
 qoʼshimcha kutubxonalarsiz, natijalar JSON koʼrinishida.
 
-Imkoniyatlar:
+Oʼrnatish (70 dan ortiq agent qoʼllab-quvvatlanadi):
 
+```bash
+npx skills add smixs/didox-skill
+```
+
+Imkoniyatlari:
+
+- Word hujjatini toza PDF holatiga keltirish va kontragentga yuborish
 - Hujjatlar roʼyxati va imzo holatini tekshirish
 - STIR boʼyicha istalgan kompaniya maʼlumotlarini soliq bazasidan olish
 - PDF ilova bilan qoralama hujjat yaratish: akt, shartnoma, ilova
 - Chop etish shaklini PDF koʼrinishida yuklab olish
+- Hujjatni kompyuterdagi E-IMZO kaliti bilan imzolash
 
-Imzolash CLI tarkibiga ataylab kiritilmagan: hujjatni E-IMZO kaliti bilan
-foydalanuvchining oʼzi imzolaydi. Sozlamalar `~/.didox/env` faylida
-saqlanadi — Quick Start boʼlimiga qarang.
+Kalit paroli faqat E-IMZO oynasiga kiritiladi va CLI orqali oʼtmaydi. Imzoni
+yuborish uchun `--submit` bayrogʼi alohida koʼrsatiladi. Sozlamalar
+`~/.didox/env` faylida saqlanadi — Quick Start boʼlimiga qarang.
+
+## См. также
+
+[snjrusmn/didox-mcp](https://github.com/snjrusmn/didox-mcp) — неофициальный
+MCP-сервер для Didox (Python, read-only + черновики): если вам нужен именно
+MCP-протокол, а не CLI и скилл. Подписи E-IMZO там нет.
 
 ## License
 

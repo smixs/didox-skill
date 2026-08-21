@@ -1,0 +1,8 @@
+{
+  "name": "didox",
+  "description": "Управление Didox.uz (ЭДО Узбекистана) через партнёрский API: документы, контрагенты, подача и подпись через E-IMZO.",
+  "author": {
+    "name": "Serge Shima",
+    "url": "https://github.com/smixs"
+  }
+}
