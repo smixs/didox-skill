@@ -246,30 +246,18 @@ def cmd_draft_delete(args):
                      user_key=get_user_key()))
 
 
-def cmd_sign(args):
-    import base64
+def make_signature(data_b64, serial, user_key):
+    """PKCS7 via local E-IMZO bridge + timestamp via Didox. Returns timeStampTokenB64."""
     import subprocess
-
-    user_key = get_user_key()
-    doc = api_request("GET", f"/v1/documents/{args.doc_id}?owner=1", user_key=user_key)
-    to_sign = (doc or {}).get("data", {}).get("json")
-    if to_sign is None:
-        fail(f"document {args.doc_id} has no data.json to sign "
-             f"(already signed, or not an outgoing draft): {json.dumps(doc)[:300]}")
-
-    data_b64 = base64.b64encode(
-        json.dumps(to_sign, ensure_ascii=False, separators=(",", ":")).encode()
-    ).decode()
 
     bridge = Path(__file__).with_name("eimzo_sign.py")
     proc = subprocess.run(
-        ["uv", "run", str(bridge), "sign", data_b64, "--serial", args.serial],
+        ["uv", "run", str(bridge), "sign", data_b64, "--serial", serial],
         capture_output=True, text=True,
     )
     if proc.returncode != 0:
         fail(f"E-IMZO signing failed: {proc.stderr.strip()[:400]}")
     signed = json.loads(proc.stdout)
-
     stamped = api_request(
         "POST", "/v1/dsvs/timestamp",
         body={"pkcs7": signed["pkcs7_64"], "signatureHex": signed["signature_hex"]},
@@ -278,16 +266,106 @@ def cmd_sign(args):
     token = (stamped or {}).get("timeStampTokenB64")
     if not token:
         fail(f"timestamp not attached: {json.dumps(stamped)[:300]}")
+    return token
 
+
+def sign_json_object(obj, serial, user_key):
+    import base64
+
+    data_b64 = base64.b64encode(
+        json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
+    ).decode()
+    return make_signature(data_b64, serial, user_key)
+
+
+def gate_submit(args, action, payload_note):
     if not args.submit:
-        emit({"ok": True, "signed": True, "submitted": False,
-              "note": "signature + timestamp ready; re-run with --submit to send",
-              "timestamp_preview": token[:24] + "..."})
-        return
+        emit({"ok": True, "prepared": action, "submitted": False,
+              "note": f"{payload_note}; re-run with --submit to send"})
+        sys.exit(0)
 
+
+def cmd_sign(args):
+    user_key = get_user_key()
+    doc = api_request("GET", f"/v1/documents/{args.doc_id}?owner=1", user_key=user_key)
+    to_sign = (doc or {}).get("data", {}).get("json")
+    if to_sign is None:
+        fail(f"document {args.doc_id} has no data.json to sign "
+             f"(already signed, or not an outgoing draft): {json.dumps(doc)[:300]}")
+    token = sign_json_object(to_sign, args.serial, user_key)
+    gate_submit(args, "sign", "signature + timestamp ready")
     result = api_request("POST", f"/v1/documents/{args.doc_id}/sign",
                          body={"signature": token}, user_key=user_key)
     emit({"ok": True, "submitted": True, "result": result})
+
+
+def cmd_accept(args):
+    """Sign an INCOMING document: documentBase64 sig + toSign sig, joined."""
+    user_key = get_user_key()
+    doc_b64 = api_request("GET", f"/v1/documents/{args.doc_id}/documentBase64",
+                          user_key=user_key)
+    payload = doc_b64 if isinstance(doc_b64, str) else (
+        doc_b64.get("data") or doc_b64.get("documentBase64"))
+    if not payload:
+        fail(f"no documentBase64 for {args.doc_id}: {json.dumps(doc_b64)[:200]}")
+    my_signature = make_signature(payload, args.serial, user_key)
+
+    doc = api_request("GET", f"/v1/documents/{args.doc_id}?owner=0", user_key=user_key)
+    to_sign = (doc or {}).get("data", {}).get("toSign")
+    if not to_sign:
+        fail(f"document {args.doc_id} has no toSign data (nothing awaits your signature)")
+    joined = api_request("POST", "/v1/dsvs/signature/join",
+                         body={"signature1": to_sign, "signature2": my_signature},
+                         user_key=user_key)
+    pkcs7 = (joined or {}).get("pkcs7B64")
+    if not pkcs7:
+        fail(f"signature join failed: {json.dumps(joined)[:300]}")
+    gate_submit(args, "accept", "joined signature ready")
+    result = api_request("POST", f"/v1/documents/{args.doc_id}/sign",
+                         body={"signature": pkcs7}, user_key=user_key)
+    emit({"ok": True, "submitted": True, "result": result})
+
+
+def cmd_reject(args):
+    user_key = get_user_key()
+    data = api_request("POST", f"/v1/documents/{args.doc_id}/tosign",
+                       body={"action": "reject", "comment": args.comment},
+                       user_key=user_key)
+    obj = (data or {}).get("data")
+    if not obj:
+        fail(f"tosign returned no data: {json.dumps(data)[:300]}")
+    token = sign_json_object(obj, args.serial, user_key)
+    gate_submit(args, "reject", "rejection signature ready")
+    result = api_request("POST", f"/v1/documents/{args.doc_id}/reject",
+                         body={"signature": token, "comment": args.comment},
+                         user_key=user_key)
+    emit({"ok": True, "submitted": True, "result": result})
+
+
+def cmd_cancel(args):
+    user_key = get_user_key()
+    data = api_request("POST", f"/v1/documents/{args.doc_id}/tosign",
+                       body={"action": "cancel"}, user_key=user_key)
+    obj = (data or {}).get("data")
+    if not obj:
+        fail(f"tosign returned no data: {json.dumps(data)[:300]}")
+    token = sign_json_object(obj, args.serial, user_key)
+    gate_submit(args, "cancel", "cancellation signature ready")
+    result = api_request("POST", f"/v1/documents/{args.doc_id}/delete",
+                         body={"signature": token}, user_key=user_key)
+    emit({"ok": True, "submitted": True, "result": result})
+
+
+def cmd_create(args):
+    payload = json.loads(Path(args.json_file).read_text())
+    emit(api_request("POST", f"/v1/documents/{args.doctype}/create/ru",
+                     body=payload, user_key=get_user_key()))
+
+
+def cmd_draft_update(args):
+    payload = json.loads(Path(args.json_file).read_text())
+    emit(api_request("POST", f"/v1/documents/{args.doc_id}/update/{args.doctype}/ru",
+                     body=payload, user_key=get_user_key()))
 
 
 def cmd_raw(args):
@@ -348,13 +426,32 @@ def main():
     draft_delete.add_argument("doc_id")
     draft_delete.set_defaults(func=cmd_draft_delete)
 
-    sign = sub.add_parser("sign", help="sign an outgoing document via local E-IMZO")
-    sign.add_argument("doc_id")
-    sign.add_argument("--serial", required=True,
-                      help="ЭЦП key serial (from eimzo_sign.py keys)")
-    sign.add_argument("--submit", action="store_true",
-                      help="actually send the signature (default: prepare only)")
-    sign.set_defaults(func=cmd_sign)
+    def signing_parser(name, help_text, needs_comment=False):
+        p = sub.add_parser(name, help=help_text)
+        p.add_argument("doc_id")
+        p.add_argument("--serial", required=True,
+                       help="ЭЦП key serial (from eimzo_sign.py keys)")
+        p.add_argument("--submit", action="store_true",
+                       help="actually send (default: prepare signature only)")
+        if needs_comment:
+            p.add_argument("--comment", required=True, help="reason, goes to the partner")
+        return p
+
+    signing_parser("sign", "sign an OUTGOING document via local E-IMZO").set_defaults(func=cmd_sign)
+    signing_parser("accept", "sign/accept an INCOMING document").set_defaults(func=cmd_accept)
+    signing_parser("reject", "reject an incoming document", needs_comment=True).set_defaults(func=cmd_reject)
+    signing_parser("cancel", "cancel a SENT outgoing document").set_defaults(func=cmd_cancel)
+
+    create = sub.add_parser("create", help="create a draft of any doctype from a JSON file")
+    create.add_argument("doctype", help="002, 005, 007, 000, 052, ... (see references)")
+    create.add_argument("json_file", help="payload per references/document-types.md")
+    create.set_defaults(func=cmd_create)
+
+    draft_update = sub.add_parser("draft-update", help="update an existing draft")
+    draft_update.add_argument("doc_id")
+    draft_update.add_argument("doctype")
+    draft_update.add_argument("json_file")
+    draft_update.set_defaults(func=cmd_draft_update)
 
     raw = sub.add_parser("raw")
     raw.add_argument("method")
