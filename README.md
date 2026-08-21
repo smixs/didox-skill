@@ -17,9 +17,20 @@ CLI для партнёрского API [Didox.uz](https://didox.uz) — узб�
 Подписание (E-IMZO) намеренно не включено: подпись юридически значима
 и требует ключ ЭЦП. См. раздел «Подписание» ниже.
 
+## Структура
+
+```
+didox-cli/            # скилл для AI-агентов (Claude Code и совместимые)
+├── SKILL.md          # инструкция агенту
+├── scripts/didox.py  # сам CLI (один файл, stdlib)
+└── references/       # pre-flight, справочники API
+```
+
 ## Установка
 
-Скопируйте `didox.py` куда угодно. Нужен только Python 3.8+.
+CLI: скопируйте `didox-cli/scripts/didox.py` куда угодно — нужен только Python 3.8+.
+
+Скилл для Claude Code: `cp -R didox-cli ~/.claude/skills/`
 
 ## Настройка
 
@@ -39,20 +50,20 @@ DIDOX_URL=https://api-partners.didox.uz   # или https://testapi3.didox.uz
 ## Команды
 
 ```bash
-./didox.py login                        # получить и закэшировать user-токен
-./didox.py profile                      # реквизиты своей компании
-./didox.py docs --partner 207151159     # документы по контрагенту
-./didox.py docs --status 0              # черновики
-./didox.py doc <DOC_ID>                 # карточка документа
-./didox.py doc-pdf <DOC_ID> out.pdf     # печатная форма
-./didox.py partner <ИНН>                # данные компании из налоговой базы
-./didox.py draft-000 --number 1 --date 2026-08-21 \
+didox-cli/scripts/didox.py login                        # получить и закэшировать user-токен
+didox-cli/scripts/didox.py profile                      # реквизиты своей компании
+didox-cli/scripts/didox.py docs --partner 207151159     # документы по контрагенту
+didox-cli/scripts/didox.py docs --status 0              # черновики
+didox-cli/scripts/didox.py doc <DOC_ID>                 # карточка документа
+didox-cli/scripts/didox.py doc-pdf <DOC_ID> out.pdf     # печатная форма
+didox-cli/scripts/didox.py partner <ИНН>                # данные компании из налоговой базы
+didox-cli/scripts/didox.py draft-000 --number 1 --date 2026-08-21 \
     --buyer-tin 207151159 --subtype 5 \
     --name "Акт № 1 к Договору № X" \
     --contract-no X --contract-date 2026-06-19 \
     --pdf act.pdf                       # черновик произвольного документа
-./didox.py draft-delete <DOC_ID>        # удалить черновик
-./didox.py raw GET '/v2/documents?limit=5'   # любой эндпоинт
+didox-cli/scripts/didox.py draft-delete <DOC_ID>        # удалить черновик
+didox-cli/scripts/didox.py raw GET '/v2/documents?limit=5'   # любой эндпоинт
 ```
 
 ## Справочники (наблюдённые значения)
