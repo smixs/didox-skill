@@ -1,4 +1,4 @@
-<h1 align="center">didox-cli</h1>
+<h1 align="center">didox-skill</h1>
 
 <p align="center">
   <strong>Didox.uz из терминала — для людей и AI-агентов</strong>
@@ -39,7 +39,7 @@ Didox — крупнейший оператор электронного док�
 ## Быстрый старт
 
 ```bash
-git clone https://github.com/smixs/didox-cli && cd didox-cli
+git clone https://github.com/smixs/didox-skill && cd didox-skill
 mkdir -p ~/.didox && cat > ~/.didox/env <<'EOF'
 DIDOX_PARTNER_TOKEN=<партнёрский JWT>
 DIDOX_TIN=<ИНН вашей компании>
@@ -101,7 +101,7 @@ cp -R didox-cli ~/.claude/skills/   # или каталог скиллов ва�
 
 ## English
 
-CLI + universal agent skill for **Didox.uz**, Uzbekistan's largest
+Universal agent skill (with a bundled CLI) for **Didox.uz**, Uzbekistan's largest
 e-document exchange (EDO) operator. Single-file Python 3.8+, zero
 dependencies, JSON output. List documents, check signing status, look up any
 company by TIN from the tax registry, create document drafts with PDF
@@ -111,7 +111,7 @@ in `~/.didox/env` (partner token, TIN, account password) — see Quick Start.
 
 ## Oʼzbekcha
 
-**didox-cli** — Didox.uz (elektron hujjat almashinuvi) bilan terminal orqali
+**didox-skill** — Didox.uz (elektron hujjat almashinuvi) bilan terminal orqali
 ishlash uchun CLI va AI-agentlar uchun tayyor skill. Bitta Python-fayl,
 qoʼshimcha kutubxonalarsiz, natijalar JSON koʼrinishida.
 
