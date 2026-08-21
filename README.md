@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/hero.webp" alt="didox-skill — Didox.uz для AI-агентов" width="100%">
+</p>
+
 <h1 align="center">didox-skill</h1>
 
 <p align="center">
